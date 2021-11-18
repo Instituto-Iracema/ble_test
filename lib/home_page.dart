@@ -1,4 +1,7 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 import 'ble_controller.dart';
@@ -12,22 +15,39 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  Future<void> requestPermissions() async => await [
+        Permission.location,
+        Permission.bluetooth,
+      ].request().then((value) => log('permissions status: $value'));
+
+  @override
+  void initState() {
+    requestPermissions();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
-    Size mediaSize = MediaQuery.of(context).size;
-    var bleController = Provider.of<BLEController>(context);
-    bleController.enableBluetooth();
+    final mediaSize = MediaQuery.of(context).size;
+    final bleController = Provider.of<BLEController>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('BLE Test'),
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () async {
+              if (await Permission.bluetooth.isGranted) {
+                await bleController.enableBluetooth();
+              } else {
+                await requestPermissions();
+              }
+            },
             icon: const Icon(Icons.bluetooth),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () async => await bleController.scanLeDevice(),
             icon: const Icon(Icons.send),
           ),
         ],

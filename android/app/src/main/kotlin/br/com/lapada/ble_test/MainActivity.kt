@@ -19,17 +19,19 @@ class MainActivity: FlutterActivity() {
     private val bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
     private var scanning = false
     private val handler = Handler()
+    private val mLeDevices: ArrayList<BluetoothDevice> = ArrayList()
 
     // Stops scanning after 10 seconds.
     private val SCAN_PERIOD: Long = 10000
 
     private var mScanSettings: ScanSettings = ScanSettings.Builder()
-        .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
         .build()
     private var mScanFilter: ScanFilter = ScanFilter.Builder()
-        .setServiceUuid(ParcelUuid.fromString("a41bc296-d17a-4e14-9762-31dc0050c860"))
+        //.setServiceUuid(ParcelUuid.fromString("a41bc296-d17a-4e14-9762-31dc0050c860"))
+        .setDeviceName("Mi Smart Band 4")
         .build()
-    private var filters: List<ScanFilter> = ArrayList()
+    private var filters: List<ScanFilter> = arrayListOf(mScanFilter)
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -50,6 +52,13 @@ class MainActivity: FlutterActivity() {
 
     /*                 Bluetooth Low Energy                 */
 
+    private fun enableBluetooth() {
+        if (bluetoothAdapter?.isEnabled == false) {
+            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            startActivityForResult(enableBtIntent, 0)
+        }
+    }
+
     private fun scanLeDevice() {
         if (!scanning) { // Stops scanning after a pre-defined scan period.
             handler.postDelayed({
@@ -69,8 +78,8 @@ class MainActivity: FlutterActivity() {
             println("BLE// onScanResult")
             Log.d("callbackType", callbackType.toString())
             Log.d("result", result.toString())
-            val btDevice: BluetoothDevice = result.device
-            connectToDevice(btDevice)
+            mLeDevices.add(result.device)
+            Log.d("Device Added", "New Device Added: " + result.device)
         }
 
         override fun onBatchScanResults(results: List<ScanResult>) {
@@ -104,16 +113,5 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun enableBluetooth() {
-        if (bluetoothAdapter?.isEnabled == false) {
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            startActivityForResult(enableBtIntent, 0)
-        }
-    }
 
-    /*                 GATT Service                 */
-
-    private fun connectToDeviceGATT(device: BluetoothDevice): BluetoothGatt? {
-        return device.connectGatt(this, false, bluetoothGattCallback)
-    }
 }
