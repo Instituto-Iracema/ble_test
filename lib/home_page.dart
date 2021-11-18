@@ -37,7 +37,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Container(
             margin: const EdgeInsets.only(left: 12, top: 5),
             child: const Text(
-              'Folha A4',
+              'Not Connected',
               style: TextStyle(color: Colors.black),
             ),
           ),
@@ -60,17 +60,11 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             child: Container(),
           ),
-          Positioned(
+          const Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: BottomBar(
-              icon1: Icons.volume_up,
-              onTapIcon1: () {},
-              onTapIcon2: () {},
-              onTapIcon3: () {},
-              onTapIcon4: () {},
-            ),
+            child: BottomBar(),
           ),
         ],
       ),

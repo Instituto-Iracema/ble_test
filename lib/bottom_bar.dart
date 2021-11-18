@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class BottomBar extends StatelessWidget {
-  final IconData? icon1;
   final void Function()? onTapIcon1;
   final void Function()? onTapIcon2;
   final void Function()? onTapIcon3;
@@ -9,7 +8,6 @@ class BottomBar extends StatelessWidget {
 
   const BottomBar({
     Key? key,
-    this.icon1,
     this.onTapIcon1,
     this.onTapIcon2,
     this.onTapIcon3,
@@ -26,16 +24,16 @@ class BottomBar extends StatelessWidget {
         children: [
           GestureDetector(
             child: Column(
-              children: [
+              children: const [
                 Icon(
-                  icon1 ?? Icons.volume_up,
+                  Icons.radio_button_checked,
                   size: 36,
-                  semanticLabel: 'Botão Ler',
+                  semanticLabel: 'Botão 1',
                   color: Colors.white,
                 ),
-                const SizedBox(height: 5),
-                const Text(
-                  'Ler',
+                SizedBox(height: 5),
+                Text(
+                  'Botão 1',
                   semanticsLabel: '',
                   style: TextStyle(color: Colors.white),
                 ),
@@ -47,14 +45,14 @@ class BottomBar extends StatelessWidget {
             child: Column(
               children: const [
                 Icon(
-                  Icons.dialpad,
+                  Icons.radio_button_off,
                   size: 36,
-                  semanticLabel: 'Botão Braille Tinta',
+                  semanticLabel: 'Botão 2',
                   color: Colors.white,
                 ),
                 SizedBox(height: 5),
                 Text(
-                  'Braille/Tinta',
+                  'Botão 2',
                   semanticsLabel: '',
                   style: TextStyle(color: Colors.white),
                 ),
@@ -66,14 +64,14 @@ class BottomBar extends StatelessWidget {
             child: Column(
               children: const [
                 Icon(
-                  Icons.file_download,
+                  Icons.radio_button_on,
                   size: 36,
-                  semanticLabel: 'Botão Importar',
+                  semanticLabel: 'Botão 3',
                   color: Colors.white,
                 ),
                 SizedBox(height: 5),
                 Text(
-                  'Importar',
+                  'Botão 3',
                   semanticsLabel: '',
                   style: TextStyle(color: Colors.white),
                 ),
@@ -85,14 +83,14 @@ class BottomBar extends StatelessWidget {
             child: Column(
               children: const [
                 Icon(
-                  Icons.file_upload,
+                  Icons.radio_button_unchecked,
                   size: 36,
-                  semanticLabel: 'Botão Exportar',
+                  semanticLabel: 'Botão 4',
                   color: Colors.white,
                 ),
                 SizedBox(height: 5),
                 Text(
-                  'Exportar',
+                  'Botão 4',
                   semanticsLabel: '',
                   style: TextStyle(color: Colors.white),
                 ),
