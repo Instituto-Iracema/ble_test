@@ -2,18 +2,25 @@ package br.com.lapada.ble_test
 
 import android.bluetooth.*
 import android.bluetooth.le.*
-import android.content.Intent
+import android.content.*
+import android.os.BatteryManager
 import android.os.Handler
 import android.os.ParcelUuid
 import android.util.Log
+
 import androidx.annotation.NonNull
+
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.EventChannel.EventSink
 import io.flutter.plugin.common.MethodChannel
+
 import kotlin.collections.ArrayList
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "br.com.lapada/ble"
+    private val METHOD_CHANNEL = "br.com.iracema/ble_method"
+    private val EVENT_CHANNEL = "br.com.iracema/ble_event"
 
     private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
     private val bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
@@ -28,24 +35,42 @@ class MainActivity: FlutterActivity() {
         .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
         .build()
     private var mScanFilter: ScanFilter = ScanFilter.Builder()
-        //.setServiceUuid(ParcelUuid.fromString("a41bc296-d17a-4e14-9762-31dc0050c860"))
-        .setDeviceName("Mi Smart Band 4")
+        .setServiceUuid(ParcelUuid.fromString("a41bc296-d17a-4e14-9762-31dc0050c860"))
         .build()
     private var filters: List<ScanFilter> = arrayListOf(mScanFilter)
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
+        EventChannel(flutterEngine.dartExecutor, EVENT_CHANNEL).setStreamHandler(
+            object : EventChannel.StreamHandler {
+                private var chargingStateChangeReceiver: BroadcastReceiver? = null
+                override fun onListen(arguments: Any?, events: EventSink) {
+                    chargingStateChangeReceiver = createChargingStateChangeReceiver(events)
+                    registerReceiver(
+                        chargingStateChangeReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+                    )
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    unregisterReceiver(chargingStateChangeReceiver)
+                    chargingStateChangeReceiver = null
+                }
+            }
+        )
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL).setMethodCallHandler {
             // Note: this method is invoked on the main thread.
                 call, result ->
-            if (call.method == "enableBluetooth") {
-                enableBluetooth()
-                result.success("Bluetooth Enabled")
-            } else if (call.method == "scanLeDevice") {
-                scanLeDevice()
-                result.success("Scanned LE Devices")
-            } else {
-                result.notImplemented()
+            when (call.method) {
+                "enableBluetooth" -> {
+                    enableBluetooth()
+                    result.success("Bluetooth Enabled")
+                }
+                "scanLeDevice" -> {
+                    result.success(scanLeDevice())
+                }
+                else -> {
+                    result.notImplemented()
+                }
             }
         }
     }
@@ -59,7 +84,7 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun scanLeDevice() {
+    private fun scanLeDevice(): ArrayList<BluetoothDevice> {
         if (!scanning) { // Stops scanning after a pre-defined scan period.
             handler.postDelayed({
                 scanning = false
@@ -71,6 +96,8 @@ class MainActivity: FlutterActivity() {
             scanning = false
             bluetoothLeScanner?.stopScan(mScanCallback)
         }
+
+        return mLeDevices
     }
 
     private val mScanCallback: ScanCallback = object : ScanCallback() {
@@ -113,5 +140,20 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    /*                 EventChannel                 */
 
+    private fun createChargingStateChangeReceiver(events: EventSink): BroadcastReceiver {
+        return object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent) {
+                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                if (status == BatteryManager.BATTERY_STATUS_UNKNOWN) {
+                    events.error("UNAVAILABLE", "Charging status unavailable", null)
+                } else {
+                    val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                            status == BatteryManager.BATTERY_STATUS_FULL
+                    events.success(if (isCharging) "charging" else "discharging")
+                }
+            }
+        }
+    }
 }

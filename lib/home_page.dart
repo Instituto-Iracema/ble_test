@@ -1,10 +1,9 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart';
 
-import 'ble_controller.dart';
 import 'bottom_bar.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -15,6 +14,31 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  static const platform = MethodChannel('br.com.iracema/ble_method');
+
+  String textReceived = '';
+
+  Future<void> enableBluetooth() async {
+    try {
+      await platform.invokeMethod('enableBluetooth');
+    } on PlatformException catch (e) {
+      log('Failed to enable bluetooth: ${e.message}.');
+    }
+  }
+
+  Future<dynamic> scanLeDevice() async {
+    var bleDevicesList;
+
+    try {
+      bleDevicesList = await platform.invokeMethod('scanLeDevice');
+      log('bleDevicesList: $bleDevicesList');
+    } on PlatformException catch (e) {
+      bleDevicesList = 'Failed to scan ble device: ${e.message}.';
+    }
+
+    return bleDevicesList;
+  }
+
   Future<void> requestPermissions() async => await [
         Permission.location,
         Permission.bluetooth,
@@ -29,8 +53,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     final mediaSize = MediaQuery.of(context).size;
-    final bleController = Provider.of<BLEController>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('BLE Test'),
@@ -39,7 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
           IconButton(
             onPressed: () async {
               if (await Permission.bluetooth.isGranted) {
-                await bleController.enableBluetooth();
+                await enableBluetooth();
               } else {
                 await requestPermissions();
               }
@@ -47,7 +69,9 @@ class _MyHomePageState extends State<MyHomePage> {
             icon: const Icon(Icons.bluetooth),
           ),
           IconButton(
-            onPressed: () async => await bleController.scanLeDevice(),
+            onPressed: () async {
+              await scanLeDevice();
+            },
             icon: const Icon(Icons.send),
           ),
         ],
@@ -78,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               borderRadius: BorderRadius.circular(5),
             ),
-            child: Container(),
+            child: Text(textReceived),
           ),
           const Positioned(
             left: 0,
