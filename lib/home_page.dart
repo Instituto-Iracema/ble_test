@@ -14,13 +14,14 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  static const platform = MethodChannel('br.com.iracema/ble_method');
+  static const method = MethodChannel('br.com.iracema/ble_method');
+  static const event = EventChannel('br.com.iracema/ble_event');
 
   String textReceived = '';
 
   Future<void> enableBluetooth() async {
     try {
-      await platform.invokeMethod('enableBluetooth');
+      await method.invokeMethod('enableBluetooth');
     } on PlatformException catch (e) {
       log('Failed to enable bluetooth: ${e.message}.');
     }
@@ -30,7 +31,7 @@ class _MyHomePageState extends State<MyHomePage> {
     var bleDevicesList;
 
     try {
-      bleDevicesList = await platform.invokeMethod('scanLeDevice');
+      bleDevicesList = await method.invokeMethod('scanLeDevice');
       log('bleDevicesList: $bleDevicesList');
     } on PlatformException catch (e) {
       bleDevicesList = 'Failed to scan ble device: ${e.message}.';
@@ -47,7 +48,20 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     requestPermissions();
+    event.receiveBroadcastStream().listen(_onEvent, onError: _onError);
     super.initState();
+  }
+
+  void _onEvent(Object? event) {
+    setState(() {
+      log('_onEvent: $event');
+    });
+  }
+
+  void _onError(Object error) {
+    setState(() {
+      log('_onError: $event');
+    });
   }
 
   @override

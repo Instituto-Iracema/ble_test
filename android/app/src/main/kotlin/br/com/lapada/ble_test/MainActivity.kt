@@ -75,7 +75,7 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    /*                 Bluetooth Low Energy                 */
+    /*                                  MethodChannel                                  */
 
     private fun enableBluetooth() {
         if (bluetoothAdapter?.isEnabled == false) {
@@ -140,7 +140,7 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    /*                 EventChannel                 */
+    /*                                  EventChannel                                  */
 
     private fun createChargingStateChangeReceiver(events: EventSink): BroadcastReceiver {
         return object : BroadcastReceiver() {
