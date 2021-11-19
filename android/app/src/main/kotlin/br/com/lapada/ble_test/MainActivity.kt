@@ -1,7 +1,11 @@
 package br.com.lapada.ble_test
 
 import android.bluetooth.*
+import android.bluetooth.BluetoothAdapter.STATE_CONNECTED
+import android.bluetooth.BluetoothAdapter.STATE_DISCONNECTED
 import android.bluetooth.le.*
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.ParcelUuid
@@ -10,15 +14,22 @@ import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.util.*
 import kotlin.collections.ArrayList
+import android.bluetooth.BluetoothGattCharacteristic
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "br.com.lapada/ble"
 
+    private val BluetoothService: BluetoothLeService? = null
     private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
     private val bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
     private var scanning = false
+    private var connectionState = STATE_DISCONNECTED
     private val handler = Handler()
+    var bluetoothGatt: BluetoothGatt? = null
+    val mGattCharacteristics: MutableList<BluetoothGattCharacteristic> = mutableListOf()
+    val charas: MutableList<BluetoothGattCharacteristic> = mutableListOf()
 
     // Stops scanning after 10 seconds.
     private val SCAN_PERIOD: Long = 10000
@@ -29,7 +40,12 @@ class MainActivity: FlutterActivity() {
     private var mScanFilter: ScanFilter = ScanFilter.Builder()
         .setServiceUuid(ParcelUuid.fromString("a41bc296-d17a-4e14-9762-31dc0050c860"))
         .build()
-    private var filters: List<ScanFilter> = ArrayList()
+    private var filters: List<ScanFilter> = arrayListOf(mScanFilter)
+
+    private var connected = false
+    private val LIST_NAME = "NAME"
+    private val LIST_UUID = "UUID"
+
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -96,11 +112,30 @@ class MainActivity: FlutterActivity() {
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 // successfully connected to the GATT Server
+                broadcastUpdate(ACTION_GATT_CONNECTED)
+                connectionState = STATE_CONNECTED
                 Log.i("BluetoothProfile", newState.toString())
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 // disconnected from the GATT Server
+                broadcastUpdate(ACTION_GATT_DISCONNECTED)
+                connectionState = STATE_DISCONNECTED
                 Log.i("BluetoothProfile", newState.toString())
             }
+        }
+
+        override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED)
+            } else {
+                Log.w(BluetoothLeService.TAG, "onServicesDiscovered received: $status")
+            }
+        }
+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic
+        ) {
+            broadcastUpdate(BluetoothLeService.ACTION_DATA_AVAILABLE)
         }
     }
 
@@ -111,9 +146,76 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    /*                 GATT Service                 */
+    private fun broadcastUpdate(action: String) {
+        val intent = Intent(action)
+        sendBroadcast(intent)
+    }
 
-    private fun connectToDeviceGATT(device: BluetoothDevice): BluetoothGatt? {
-        return device.connectGatt(this, false, bluetoothGattCallback)
+
+
+    /*                Discover services              */
+
+    private val gattUpdateReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                BluetoothLeService.ACTION_GATT_CONNECTED -> {
+                    connected = true
+                }
+                BluetoothLeService.ACTION_GATT_DISCONNECTED -> {
+                    connected = false
+                }
+                BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED -> {
+                    // Show all the supported services and characteristics on the user interface.
+                    displayGattServices(BluetoothService?.supportedGattServices)
+                }
+            }
+        }
+    }
+
+    /*                Read BLE characteristics                */
+
+    private fun displayGattServices(gattServices: List<BluetoothGattService>?) {
+        if (gattServices == null) return
+        var uuid: String
+        val unknownServiceString: String = resources.getString(R.string.unknown_service)
+        val unknownCharaString: String = resources.getString(R.string.unknown_characteristic)
+        val gattServiceData: MutableList<HashMap<String, String>> = mutableListOf()
+        val gattCharacteristicData: MutableList<ArrayList<HashMap<String, String>>> =
+            mutableListOf()
+
+        // Loops through available GATT Services.
+        gattServices.forEach { gattService ->
+            val currentServiceData = HashMap<String, String>()
+            uuid = gattService.uuid.toString()
+            currentServiceData[LIST_NAME] = SampleGattAttributes.lookup(uuid, unknownServiceString)
+            currentServiceData[LIST_UUID] = uuid
+            gattServiceData += currentServiceData
+
+            val gattCharacteristicGroupData: ArrayList<HashMap<String, String>> = arrayListOf()
+            val gattCharacteristics = gattService.characteristics
+
+            // Loops through available Characteristics.
+            gattCharacteristics.forEach { gattCharacteristic ->
+                charas += gattCharacteristic
+                val currentCharaData: HashMap<String, String> = hashMapOf()
+                uuid = gattCharacteristic.uuid.toString()
+                currentCharaData[LIST_NAME] = SampleGattAttributes.lookup(uuid, unknownCharaString)
+                currentCharaData[LIST_UUID] = uuid
+                gattCharacteristicGroupData += currentCharaData
+            }
+            mGattCharacteristics += charas
+            gattCharacteristicData += gattCharacteristicGroupData
+        }
+    }
+
+    companion object {
+        const val ACTION_GATT_CONNECTED = "com.example.bluetooth.le.ACTION_GATT_CONNECTED"
+        const val ACTION_GATT_DISCONNECTED =
+            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED"
+        const val ACTION_GATT_SERVICES_DISCOVERED =
+            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED"
+
+        private const val STATE_DISCONNECTED = 0
+        private const val STATE_CONNECTED = 2
     }
 }
