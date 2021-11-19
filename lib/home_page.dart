@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'ble_controller.dart';
 import 'bottom_bar.dart';
@@ -19,15 +20,29 @@ class _MyHomePageState extends State<MyHomePage> {
     bleController.enableBluetooth();
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+            onPressed: () async {
+              PermissionStatus permissionLocationStatus =
+                  await Permission.location.status;
+
+              if (permissionLocationStatus.isDenied) {
+                await Permission.location.request();
+              }
+            },
+            icon: const Icon(Icons.perm_device_info)),
         title: const Text('BLE Test'),
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              bleController.enableBluetooth();
+            },
             icon: const Icon(Icons.bluetooth),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () async {
+              await bleController.scanLeDevice();
+            },
             icon: const Icon(Icons.send),
           ),
         ],
