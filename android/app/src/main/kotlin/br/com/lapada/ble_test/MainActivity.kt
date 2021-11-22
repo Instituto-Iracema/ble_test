@@ -17,6 +17,9 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.*
 import kotlin.collections.ArrayList
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothGattService
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "br.com.lapada/ble"
@@ -106,6 +109,7 @@ class MainActivity: FlutterActivity() {
         var bluetoothGatt: BluetoothGatt? = null
 
         bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallback)
+        writeData(bluetoothGatt)
     }
 
     private val bluetoothGattCallback = object : BluetoothGattCallback() {
@@ -206,6 +210,18 @@ class MainActivity: FlutterActivity() {
             mGattCharacteristics += charas
             gattCharacteristicData += gattCharacteristicGroupData
         }
+    }
+
+    /*                Write BLE characteristics                */
+
+    private fun writeData(bluetoothGatt: BluetoothGatt?){
+        val serviceUuid = UUID.fromString("a41bc296-d17a-4e14-9762-31dc0050c850")
+        val characteristicUuid = UUID.fromString("a41bc296-d17a-4e14-9762-31dc0050c851")
+
+        val mSVC: BluetoothGattService = bluetoothGatt!!.getService(serviceUuid)
+        val mCH = mSVC.getCharacteristic(characteristicUuid)
+        mCH.setValue("<ACK PUT>")
+        bluetoothGatt.writeCharacteristic(mCH)
     }
 
     companion object {
