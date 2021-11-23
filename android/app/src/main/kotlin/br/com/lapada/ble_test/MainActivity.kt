@@ -20,6 +20,10 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGattService
+import android.content.IntentFilter
+import android.bluetooth.BluetoothGatt
+import com.juul.kable.Scanner
+import kotlinx.coroutines.flow.first
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "br.com.lapada/ble"
@@ -61,11 +65,17 @@ class MainActivity: FlutterActivity() {
             } else if (call.method == "scanLeDevice") {
                 scanLeDevice()
                 result.success("Scanned LE Devices")
-            } else {
+            } else if(call.method == "writeData") {
+                writeData()
+                result.success("Write device")
+            }
+            else {
                 result.notImplemented()
             }
         }
     }
+
+
 
     /*                 Bluetooth Low Energy                 */
 
@@ -90,6 +100,7 @@ class MainActivity: FlutterActivity() {
             Log.d("result", result.toString())
             val btDevice: BluetoothDevice = result.device
             connectToDevice(btDevice)
+
         }
 
         override fun onBatchScanResults(results: List<ScanResult>) {
@@ -106,10 +117,7 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun connectToDevice(device: BluetoothDevice) {
-        var bluetoothGatt: BluetoothGatt? = null
-
         bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallback)
-        writeData(bluetoothGatt)
     }
 
     private val bluetoothGattCallback = object : BluetoothGattCallback() {
@@ -214,14 +222,28 @@ class MainActivity: FlutterActivity() {
 
     /*                Write BLE characteristics                */
 
-    private fun writeData(bluetoothGatt: BluetoothGatt?){
-        val serviceUuid = UUID.fromString("a41bc296-d17a-4e14-9762-31dc0050c850")
-        val characteristicUuid = UUID.fromString("a41bc296-d17a-4e14-9762-31dc0050c851")
+    private fun writeData(){
+        bluetoothGatt!!.discoverServices()
+        onServicesDiscovered(bluetoothGatt)
+        //var servicesFound = bluetoothGatt!!.discoverServices();
+        //Log.d("Service", "$servicesFound")
+        //if(servicesFound) {
+          //  val serviceUuid = UUID.fromString("a41bc296-d17a-4e14-9762-31dc0050c850")
+          //  val characteristicUuid = UUID.fromString("a41bc296-d17a-4e14-9762-31dc0050c851")
+          //  val mSVC: BluetoothGattService = bluetoothGatt!!.getService(serviceUuid)
+          //  val mCH = mSVC.getCharacteristic(characteristicUuid)
+          //  mCH.setValue("<ACK PUT>")
+          //  bluetoothGatt!!.writeCharacteristic(mCH)
+        //}
+    }
 
-        val mSVC: BluetoothGattService = bluetoothGatt!!.getService(serviceUuid)
-        val mCH = mSVC.getCharacteristic(characteristicUuid)
-        mCH.setValue("<ACK PUT>")
-        bluetoothGatt.writeCharacteristic(mCH)
+    fun onServicesDiscovered(gatt: BluetoothGatt?) {
+        val gattServices: List<BluetoothGattService> = bluetoothGatt!!.services
+        Log.e("onServicesDiscovered", "Services count: " + gattServices.size)
+        var services = gatt!!.services
+        for (service in services) {
+            Log.i("Ts", "Service UUID Found: " + service.uuid.toString())
+        }
     }
 
     companion object {
@@ -233,5 +255,14 @@ class MainActivity: FlutterActivity() {
 
         private const val STATE_DISCONNECTED = 0
         private const val STATE_CONNECTED = 2
+    }
+
+    private fun makeGattUpdateIntentFilter(): IntentFilter? {
+        val intentFilter = IntentFilter()
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED)
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED)
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED)
+        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE)
+        return intentFilter
     }
 }
