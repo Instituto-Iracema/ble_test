@@ -1,22 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'home_page.dart';
+import './MainPage.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(new ExampleApplication());
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
+class ExampleApplication extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter BLE Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(),
-    );
+    return MaterialApp(home: MainPage());
   }
 }
